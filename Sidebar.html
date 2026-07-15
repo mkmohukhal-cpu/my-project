@@ -1,0 +1,26 @@
+<nav id="sidebar" class="bg-dark text-white p-3 d-flex flex-column flex-shrink-0">
+  <a href="?page=Dashboard" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+    <i class="fa-solid fa-users-gear fa-xl ms-2 text-indigo"></i>
+    <span class="fs-5 fw-bold">EmpDatabase</span>
+  </a>
+  <hr>
+  <ul class="nav nav-pills flex-column mb-auto">
+    <li class="nav-item mb-1">
+      <a href="?page=Dashboard" class="nav-link text-white"><i class="fa-solid fa-chart-pie ms-2"></i>لوحة التحكم</a>
+    </li>
+    <li class="nav-item mb-1">
+      <a href="?page=search" class="nav-link text-white"><i class="fa-solid fa-magnifying-glass ms-2"></i>بحث</a>
+    </li>
+    <? if (currentUser && (currentUser.role === 'ROLE_ADMIN' || currentUser.role === 'ROLE_HR')) { ?>
+      <li class="nav-item mb-1">
+        <a href="?page=EmployeeForm" class="nav-link text-white"><i class="fa-solid fa-user-plus ms-2"></i>إضافة موظف</a>
+      </li>
+      <li class="nav-item mb-1">
+        <a href="?page=Documents" class="nav-link text-white"><i class="fa-solid fa-folder-open ms-2"></i>المستندات</a>
+      </li>
+    <? } ?>
+    <li class="nav-item mb-1">
+      <a href="?page=Notifications" class="nav-link text-white"><i class="fa-solid fa-bell ms-2"></i>الإشعارات</a>
+    </li>
+  </ul>
+</nav>

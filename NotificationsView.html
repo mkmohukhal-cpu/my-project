@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <div class="d-flex">
+    <?!= include('Sidebar'); ?>
+    <div id="main-content" class="flex-grow-1 p-4">
+      <?
+        // قائمة بيضاء أمنية لتحديد الملفات المسموح بفتحها فقط عبر الرابط
+        var allowedPages = {
+          'main'          : 'Home',
+          'profile'       : 'Profile',
+          'notifications' : 'Notifications',
+          'search'        : 'Search'
+        };
+        var contentFile = allowedPages[page] || 'Home';
+      ?>
+      <?!= include(contentFile); ?>
+    </div>
+  </div>
+  <?!= include('Scripts'); ?>
+</body>
+</html>

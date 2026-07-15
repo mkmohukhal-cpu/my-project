@@ -1,0 +1,19 @@
+<header class="navbar navbar-expand navbar-light bg-white border-bottom px-4 shadow-sm">
+  <div class="container-fluid ps-0">
+    <span class="navbar-brand mb-0 h5 text-secondary fw-semibold">لوحة العمل</span>
+    <ul class="navbar-nav me-auto align-items-center">
+      <li class="nav-item ms-3">
+        <a href="?page=Notifications" class="text-secondary position-relative"><i class="fa-regular fa-bell fa-lg"></i></a>
+      </li>
+      <li class="nav-item ms-3 text-start d-none d-sm-block">
+        <span class="d-block fw-semibold small text-dark"><?= currentUser ? currentUser.name : '' ?></span>
+        <span class="badge bg-secondary-subtle text-secondary font-monospace" style="font-size: 0.7rem;"><?= currentUser ? currentUser.role : '' ?></span>
+      </li>
+      <li class="nav-item">
+        <button class="btn btn-outline-danger btn-sm" id="logout-btn" onclick="handleLogout()">
+          <i class="fa-solid fa-right-from-bracket ms-1"></i>خروج
+        </button>
+      </li>
+    </ul>
+  </div>
+</header>

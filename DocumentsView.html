@@ -1,0 +1,41 @@
+<div class="container-fluid login-wrapper d-flex align-items-center justify-content-center min-vh-100 bg-light">
+  <div class="card shadow-lg p-4 p-md-5 login-card">
+    <div class="text-center mb-4">
+      <div class="logo-placeholder mb-3 d-inline-flex align-items-center justify-content-center bg-indigo text-white rounded-circle shadow-sm">
+        <i class="fa-solid fa-building-user fa-2x"></i>
+      </div>
+      <h3 class="fw-bold text-dark">EmpDatabase</h3>
+      <p class="text-secondary small">بوابة الإدارة المؤسسية</p>
+    </div>
+    
+    <div id="login-error-alert" class="alert alert-danger d-none py-2 small" role="alert"></div>
+
+    <form id="login-form" novalidate>
+      <div class="mb-3">
+        <label for="login-email" class="form-label small fw-semibold text-secondary">البريد الإلكتروني</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light text-secondary"><i class="fa-solid fa-envelope"></i></span>
+          <input type="email" class="form-control" id="login-email" placeholder="admin@company.com" required>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label for="login-password" class="form-label small fw-semibold text-secondary">كلمة المرور</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light text-secondary"><i class="fa-solid fa-lock"></i></span>
+          <input type="password" class="form-control" id="login-password" placeholder="أدخل كلمة المرور" required>
+          <button class="btn btn-outline-secondary border" type="button" id="toggle-password-btn">
+            <i class="fa-solid fa-eye" id="toggle-password-icon"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary py-2 fw-semibold d-flex align-items-center justify-content-center" id="login-submit-btn">
+          <span id="login-btn-text">تسجيل الدخول</span>
+          <span id="login-spinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

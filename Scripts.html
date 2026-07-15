@@ -1,0 +1,77 @@
+<script>
+  const api = {
+    run: function(funcName, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
+          [funcName](...args);
+      });
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('login-form');
+    const togglePasswordBtn = document.getElementById('toggle-password-btn');
+    const passwordInput = document.getElementById('login-password');
+    const toggleIcon = document.getElementById('toggle-password-icon');
+
+    if (togglePasswordBtn && passwordInput) {
+      togglePasswordBtn.addEventListener('click', function() {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        toggleIcon.classList.toggle('fa-eye');
+        toggleIcon.classList.toggle('fa-eye-slash');
+      });
+    }
+
+    if (loginForm) {
+      loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value.trim();
+        const password = passwordInput.value;
+        const errorAlert = document.getElementById('login-error-alert');
+        const submitBtn = document.getElementById('login-submit-btn');
+        const btnText = document.getElementById('login-btn-text');
+        const spinner = document.getElementById('login-spinner');
+
+        errorAlert.classList.add('d-none');
+        if (!email || !password) {
+          errorAlert.textContent = 'يرجى تعبئة كافة الحقول المطلوبة.';
+          errorAlert.classList.remove('d-none');
+          return;
+        }
+
+        submitBtn.setAttribute('disabled', 'true');
+        btnText.textContent = 'جاري التحقق...';
+        spinner.classList.remove('d-none');
+
+        api.run('loginUser', email, password)
+          .then(res => {
+            if (res.success) {
+              window.location.href = window.location.pathname + '?page=Dashboard';
+            } else {
+              errorAlert.textContent = res.message || 'فشل المصادقة.';
+              errorAlert.classList.remove('d-none');
+              submitBtn.removeAttribute('disabled');
+              btnText.textContent = 'تسجيل الدخول';
+              spinner.classList.add('d-none');
+            }
+          })
+          .catch(() => {
+            errorAlert.textContent = 'حدث خطأ في الاتصال بالنظام.';
+            errorAlert.classList.remove('d-none');
+            submitBtn.removeAttribute('disabled');
+            btnText.textContent = 'تسجيل الدخول';
+            spinner.classList.add('d-none');
+          });
+      });
+    }
+  });
+
+  function handleLogout() {
+    api.run('logoutUser')
+      .then(() => { window.location.href = window.location.pathname; })
+      .catch(() => { window.location.reload(); });
+  }
+</script>

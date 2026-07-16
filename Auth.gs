@@ -1,3 +1,10 @@
+/**
+ * =====================================================================
+ * Auth.gs — المصدر الرسمي الوحيد للمصادقة والتوجيه (Routing) في النظام.
+ * لا تكرر أي دالة من هنا في ملفات أخرى (Code.gs وغيره).
+ * =====================================================================
+ */
+
 function createPasswordHash(password) {
   const rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password, Utilities.Charset.UTF_8);
   return rawHash.map(byte => (byte < 0 ? byte + 256 : byte).toString(16).padStart(2, '0')).join('');
@@ -7,27 +14,47 @@ function verifyPassword(password, hash) {
   return createPasswordHash(password) === hash;
 }
 
+/**
+ * ينشئ حساب المدير الافتراضي مرة واحدة فقط، وفقط لو مفيش أي مستخدمين في النظام بالمرة.
+ * بيانات المدير (البريد + كلمة المرور) لازم تتحط في Script Properties قبل أول تشغيل:
+ * من Project Settings -> Script Properties أضف:
+ *   DEFAULT_ADMIN_EMAIL    = admin@yourcompany.com
+ *   DEFAULT_ADMIN_PASSWORD = كلمة مرور قوية من اختيارك
+ */
 function createDefaultAdmin() {
   try {
-    const sheet = Database.getSheet('Users');
-    const rows = Database.getAllRows('Users');
-    
-    const existingAdmin = rows.find(r => r.email === 'admin@company.com');
-    if (!existingAdmin) {
-      const adminUser = {
-        userId: 'USR_ADMIN_01',
-        employeeId: 'EMP_001',
-        email: 'admin@company.com',
-        passwordHash: createPasswordHash('Admin@123'),
-        role: 'ADMIN',
-        status: 'ACTIVE',
-        lastLogin: '',
-        createdAt: new Date().toISOString()
-      };
-      Database.insertRow('Users', adminUser);
+    const props = PropertiesService.getScriptProperties();
+    if (props.getProperty('ADMIN_BOOTSTRAP_DONE') === '1') return;
+
+    const rows = Database.getAllRows(SHEET_USERS);
+    if (rows.length > 0) {
+      props.setProperty('ADMIN_BOOTSTRAP_DONE', '1');
+      return;
     }
+
+    const adminEmail = props.getProperty('DEFAULT_ADMIN_EMAIL');
+    const adminPassword = props.getProperty('DEFAULT_ADMIN_PASSWORD');
+
+    if (!adminEmail || !adminPassword) {
+      LoggerService.warn('لم يتم العثور على DEFAULT_ADMIN_EMAIL / DEFAULT_ADMIN_PASSWORD في Script Properties. لن يتم إنشاء حساب مدير افتراضي حتى يتم ضبطهما.');
+      return;
+    }
+
+    const adminUser = {
+      userId: Helpers.generateId('USR'),
+      employeeId: '',
+      email: adminEmail.trim().toLowerCase(),
+      passwordHash: createPasswordHash(adminPassword),
+      role: ROLE_ADMIN,
+      status: STATUS_ACTIVE,
+      lastLogin: '',
+      createdAt: new Date().toISOString()
+    };
+    Database.insertRow(SHEET_USERS, adminUser);
+    props.setProperty('ADMIN_BOOTSTRAP_DONE', '1');
+    LoggerService.info('تم إنشاء حساب المدير الافتراضي: ' + adminUser.email);
   } catch (err) {
-    // تجاهل أو تسجيل الخطأ صامتاً
+    LoggerService.error('createDefaultAdmin error: ' + err.message);
   }
 }
 
@@ -35,22 +62,23 @@ function loginUser(email, password) {
   try {
     createDefaultAdmin();
     if (!email || !password) {
-      return { success: false, message: 'البريد الإلكتروني وكلمة المرور مطلوبان.' };
+      return Helpers.buildResponse(false, 'البريد الإلكتروني وكلمة المرور مطلوبان.');
     }
     const cleanEmail = email.trim().toLowerCase();
-    const user = Database.findRow('Users', 'email', cleanEmail);
+    const user = Database.findRow(SHEET_USERS, 'email', cleanEmail);
     if (!user) {
-      return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' };
+      return Helpers.buildResponse(false, 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
     }
-    if (user.status === 'DISABLED') {
-      return { success: false, message: 'هذا الحساب معطل حالياً.' };
+    if (user.status === STATUS_DISABLED) {
+      return Helpers.buildResponse(false, 'هذا الحساب معطل حالياً.');
     }
     if (!verifyPassword(password, user.passwordHash)) {
-      return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' };
+      return Helpers.buildResponse(false, 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
     }
 
     const sessionData = {
       userId: user.userId,
+      employeeId: user.employeeId || '',
       name: user.email.split('@')[0],
       email: user.email,
       role: user.role,
@@ -59,14 +87,16 @@ function loginUser(email, password) {
 
     const cache = CacheService.getUserCache();
     const token = Utilities.getUuid();
-    cache.put(token, JSON.stringify(sessionData), 21600);
+    cache.put(token, JSON.stringify(sessionData), 21600); // 6 ساعات
     PropertiesService.getUserProperties().setProperty('SESSION_TOKEN', token);
 
-    Database.updateRow('Users', 'userId', user.userId, { lastLogin: new Date().toISOString() });
+    Database.updateRow(SHEET_USERS, 'userId', user.userId, { lastLogin: new Date().toISOString() });
+    LoggerService.info('تسجيل دخول ناجح: ' + user.email);
 
-    return { success: true, message: 'تم تسجيل الدخول بنجاح', data: { email: user.email, role: user.role } };
+    return Helpers.buildResponse(true, 'تم تسجيل الدخول بنجاح', { email: user.email, role: user.role });
   } catch (err) {
-    return { success: false, message: 'حدث خطأ غير متوقع أثناء تسجيل الدخول: ' + err.message };
+    LoggerService.error('loginUser error: ' + err.message);
+    return Helpers.buildResponse(false, 'حدث خطأ غير متوقع أثناء تسجيل الدخول: ' + err.message);
   }
 }
 
@@ -78,9 +108,9 @@ function logoutUser() {
       CacheService.getUserCache().remove(token);
       props.deleteProperty('SESSION_TOKEN');
     }
-    return { success: true, message: 'تم تسجيل الخروج بنجاح.' };
+    return Helpers.buildResponse(true, 'تم تسجيل الخروج بنجاح.');
   } catch (err) {
-    return { success: false, message: err.message };
+    return Helpers.buildResponse(false, err.message);
   }
 }
 
@@ -101,33 +131,63 @@ function isAuthenticated() {
   return getCurrentUser() !== null;
 }
 
-// تعديل doGet لضمان إرجاع Main.html دائمًا (إلا لو لم يتم تسجيل الدخول)
+/**
+ * نقطة الدخول الوحيدة للتطبيق. دايمًا بترجع Main.html (اللي بيقرر داخليًا
+ * يعرض فورم الدخول أو الهيكل الكامل بالـ Sidebar حسب حالة الجلسة).
+ */
 function doGet(e) {
-  const page = (e && e.parameter && e.parameter.page) ? e.parameter.page : 'main';
-  const auth = isAuthenticated();
-  
-  if (!auth && page !== 'login') {
-    return HtmlService.createTemplateFromFile('Login').evaluate()
-      .setTitle('تسجيل الدخول')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  try {
+    const params = (e && e.parameter) ? e.parameter : {};
+    const requestedPage = params.page || 'Dashboard';
+    const employeeId = params.id || '';
+    const authenticated = isAuthenticated();
+    const currentUser = authenticated ? getCurrentUser() : null;
+
+    const template = HtmlService.createTemplateFromFile('Main');
+    template.isAuthenticated = authenticated;
+    template.currentUser = currentUser;
+    template.page = authenticated ? requestedPage : 'Login';
+    template.employeeId = employeeId;
+
+    return template.evaluate()
+      .setTitle('نظام قاعدة بيانات الموظفين')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } catch (error) {
+    return HtmlService.createHtmlOutput(
+      '<div style="direction:ltr; padding:20px; font-family:sans-serif;"><h3>System Error</h3>' +
+      '<p style="color:red;"><b>Message:</b> ' + error.message + '</p><pre>' + error.stack + '</pre></div>'
+    );
   }
-  
-  if (auth && page === 'login') {
-    return buildMainTemplate('main');
-  }
-  
-  return buildMainTemplate(page);
 }
 
-function buildMainTemplate(page) {
-  const template = HtmlService.createTemplateFromFile('Main');
-  template.page = page; // تمرير اسم الصفحة للـ Main.html
-  return template.evaluate()
-    .setTitle('نظام إدارة الموظفين')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
+/**
+ * include بسيط: يجيب محتوى ملف ثابت (بدون scriptlets ديناميكية).
+ * يُستخدم للملفات اللي مالهاش داتا خاصة بيها (Footer, Scripts, Styles).
+ */
 function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  try {
+    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  } catch (error) {
+    return '<!-- Error loading ' + filename + ': ' + error.message + ' -->';
+  }
+}
+
+/**
+ * include متقدم: بيعمل evaluate للملف كـ Template مستقل وبيمرر له بيانات
+ * (زي currentUser أو employeeId) عشان يقدر يستخدم <?= ?> و <? ?> بداخله.
+ * ده ضروري لأي partial فيه scriptlets (Sidebar, Header, Dashboard, Profile...).
+ */
+function includeWithData(filename, data) {
+  try {
+    const template = HtmlService.createTemplateFromFile(filename);
+    if (data) {
+      Object.keys(data).forEach(function(key) {
+        template[key] = data[key];
+      });
+    }
+    return template.evaluate().getContent();
+  } catch (error) {
+    return '<!-- Error loading ' + filename + ': ' + error.message + ' -->';
+  }
 }

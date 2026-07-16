@@ -42,7 +42,7 @@ const Database = {
   initializeSchema: function(ss) {
     const schema = {
       'Employees': ['employeeId', 'firstName', 'lastName', 'email', 'phone', 'department', 'jobTitle', 'employmentType', 'status', 'hireDate', 'managerId', 'emergencyContactName', 'emergencyContactPhone', 'createdAt', 'updatedAt'],
-      'Documents': ['documentId', 'employeeId', 'documentType', 'documentName', 'driveFileId', 'uploadedBy', 'uploadedAt', 'status'],
+      'Documents': ['documentId', 'employeeId', 'documentType', 'documentName', 'issueDate', 'expiryDate', 'driveFileId', 'uploadedBy', 'uploadedAt', 'status', 'notes'],
       'Users': ['userId', 'employeeId', 'email', 'passwordHash', 'role', 'status', 'lastLogin', 'createdAt'],
       'Settings': ['configKey', 'configValue', 'description', 'updatedAt'],
       'Logs': ['timestamp', 'level', 'message', 'user'],
@@ -70,7 +70,7 @@ const Database = {
   ensureColumns: function(sheet, sheetName) {
     const schemas = {
       'Employees': ['employeeId', 'firstName', 'lastName', 'email', 'phone', 'department', 'jobTitle', 'employmentType', 'status', 'hireDate', 'managerId', 'emergencyContactName', 'emergencyContactPhone', 'createdAt', 'updatedAt'],
-      'Documents': ['documentId', 'employeeId', 'documentType', 'documentName', 'driveFileId', 'uploadedBy', 'uploadedAt', 'status'],
+      'Documents': ['documentId', 'employeeId', 'documentType', 'documentName', 'issueDate', 'expiryDate', 'driveFileId', 'uploadedBy', 'uploadedAt', 'status', 'notes'],
       'Users': ['userId', 'employeeId', 'email', 'passwordHash', 'role', 'status', 'lastLogin', 'createdAt'],
       'Settings': ['configKey', 'configValue', 'description', 'updatedAt'],
       'Logs': ['timestamp', 'level', 'message', 'user'],
@@ -232,14 +232,6 @@ function getOrCreateEmployeeFolder(employeeCode) {
   return empFolder;
 }
 
-// دالة تسجيل التدقيق (Audit Log)
-function logAuditAction(user, employeeId, action, prevVal, newVal) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName("AuditLog");
-  if (!sheet) {
-    sheet = ss.insertSheet("AuditLog");
-    sheet.appendRow(["Timestamp", "User", "Employee ID", "Action", "Previous Value", "New Value"]);
-  }
-  const now = new Date();
-  sheet.appendRow([now, user, employeeId, action, prevVal, newVal]);
-}
+// ملحوظة: دالة logAuditAction الرسمية الوحيدة موجودة في Employee.gs
+// (بترتيب باراميترات: user, action, employeeId, previousValue, newValue)
+// وبتكتب في شيت "AuditLogs" المعرّف ضمن Database.initializeSchema.

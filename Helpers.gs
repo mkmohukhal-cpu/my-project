@@ -50,3 +50,24 @@ const Helpers = {
     };
   }
 };
+
+/**
+ * يحسب حالة انتهاء صلاحية مستند أو عقد بناءً على تاريخ الانتهاء.
+ * دالة مشتركة يُستدعى عليها من Code.gs و Notification.gs — لا تُكرر في مكان آخر.
+ * @param {string} expiryDateStr
+ * @param {number} warningDays عدد الأيام قبل الانتهاء يُعتبر خلالها "قارب على الانتهاء"
+ * @return {'Valid'|'Expiring Soon'|'Expired'}
+ */
+function calculateExpiryStatus(expiryDateStr, warningDays) {
+  if (!expiryDateStr) return 'Valid';
+  const days = warningDays || 30;
+  const expiryDate = new Date(expiryDateStr);
+  if (isNaN(expiryDate.getTime())) return 'Valid';
+  const today = new Date();
+  const diffTime = expiryDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return 'Expired';
+  if (diffDays <= days) return 'Expiring Soon';
+  return 'Valid';
+}

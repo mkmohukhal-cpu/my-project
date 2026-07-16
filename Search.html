@@ -1,9 +1,87 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top">
-  </head>
-  <body>
-    
-  </body>
-</html>
+<div class="container-fluid">
+  <div class="card border-0 shadow-sm p-4 mb-4">
+    <h4 class="mb-3"><i class="fa-solid fa-magnifying-glass me-2"></i>بحث عن موظف</h4>
+    <div class="row g-3 align-items-end">
+      <div class="col-md-8">
+        <label class="form-label">اكتب اسم الموظف، البريد الإلكتروني، أو رقم الموظف</label>
+        <input type="text" id="searchInput" class="form-control" placeholder="ابحث هنا...">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100" onclick="runSearch()"><i class="fa-solid fa-search ms-1"></i>بحث</button>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-secondary w-100" onclick="clearSearch()">مسح</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm p-4">
+    <h5 class="mb-3">نتائج البحث</h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>رقم الموظف</th>
+            <th>الاسم</th>
+            <th>القسم</th>
+            <th>المسمى الوظيفي</th>
+            <th>الحالة</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="searchResultsBody">
+          <tr><td colspan="6" class="text-center text-muted">جاري تحميل الموظفين...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    runSearch();
+    document.getElementById('searchInput').addEventListener('keyup', function(e) {
+      if (e.key === 'Enter') runSearch();
+    });
+  });
+
+  function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    runSearch();
+  }
+
+  function runSearch() {
+    const query = document.getElementById('searchInput').value.trim();
+    const tbody = document.getElementById('searchResultsBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">جاري البحث...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(response) {
+        tbody.innerHTML = '';
+        const results = response && response.success ? response.data : [];
+        if (results && results.length > 0) {
+          results.forEach(emp => {
+            const statusBadge = emp.status === 'Active' ? 'success' : 'secondary';
+            tbody.innerHTML += `<tr>
+              <td>${emp.employeeId}</td>
+              <td>${(emp.firstName || '')} ${(emp.lastName || '')}</td>
+              <td>${emp.department || '-'}</td>
+              <td>${emp.jobTitle || '-'}</td>
+              <td><span class="badge bg-${statusBadge}">${emp.status || '-'}</span></td>
+              <td>
+                <a href="?page=Profile&id=${encodeURIComponent(emp.employeeId)}" class="btn btn-sm btn-outline-primary">
+                  <i class="fa-solid fa-eye"></i> عرض
+                </a>
+              </td>
+            </tr>`;
+          });
+        } else {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد نتائج مطابقة</td></tr>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">حدث خطأ أثناء البحث: ' + err.message + '</td></tr>';
+      })
+      .searchEmployees(query, {});
+  }
+</script>

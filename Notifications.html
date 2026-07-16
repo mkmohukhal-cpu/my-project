@@ -1,9 +1,69 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top">
-  </head>
-  <body>
-    
-  </body>
-</html>
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fa-solid fa-bell me-2"></i>الإشعارات</h4>
+    <button class="btn btn-outline-secondary btn-sm" onclick="loadNotifications()">
+      <i class="fa-solid fa-rotate ms-1"></i>تحديث
+    </button>
+  </div>
+
+  <div class="card border-0 shadow-sm p-4">
+    <h5 class="mb-3">مستندات وعقود بحاجة للمراجعة</h5>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>رقم الموظف</th>
+            <th>نوع البند</th>
+            <th>تاريخ الانتهاء</th>
+            <th>الحالة</th>
+            <th>اسم الملف</th>
+            <th>الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="notificationsTableBody">
+          <tr><td colspan="6" class="text-center text-muted">جاري تحميل الإشعارات...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', loadNotifications);
+
+  function loadNotifications() {
+    const tbody = document.getElementById('notificationsTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">جاري التحميل...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function(response) {
+        tbody.innerHTML = '';
+        const notifications = response && response.success ? response.data : [];
+        if (notifications && notifications.length > 0) {
+          notifications.forEach(n => {
+            const isExpired = n.status === 'Expired';
+            const badgeClass = isExpired ? 'danger' : 'warning';
+            const badgeText = isExpired ? 'منتهي' : 'قارب على الانتهاء';
+            tbody.innerHTML += `<tr>
+              <td>${n.employeeId}</td>
+              <td>${n.type}</td>
+              <td>${n.expiryDate || '-'}</td>
+              <td><span class="badge bg-${badgeClass}">${badgeText}</span></td>
+              <td>${n.fileName || '-'}</td>
+              <td>
+                <a href="?page=Profile&id=${encodeURIComponent(n.employeeId)}" class="btn btn-sm btn-outline-primary">
+                  <i class="fa-solid fa-eye"></i> عرض ملف الموظف
+                </a>
+              </td>
+            </tr>`;
+          });
+        } else {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد إشعارات حالياً — كل شيء على ما يرام</td></tr>';
+        }
+      })
+      .withFailureHandler(function(err) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">حدث خطأ: ' + err.message + '</td></tr>';
+      })
+      .getSystemNotifications();
+  }
+</script>

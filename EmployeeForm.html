@@ -1,9 +1,183 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <base target="_top">
-  </head>
-  <body>
-    
-  </body>
-</html>
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0" id="formTitle"><i class="fa-solid fa-user-plus me-2"></i>إضافة موظف جديد</h4>
+    <a href="?page=Search" class="btn btn-secondary btn-sm">
+      <i class="fa-solid fa-arrow-right ms-1"></i>العودة للبحث
+    </a>
+  </div>
+
+  <input type="hidden" id="formEmployeeId" value="<?= employeeId || '' ?>">
+
+  <div id="formAlert" class="alert d-none"></div>
+
+  <div class="card border-0 shadow-sm p-4">
+    <form id="employeeForm" novalidate>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">الاسم الأول <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="firstName" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">اسم العائلة <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="lastName" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">البريد الإلكتروني <span class="text-danger">*</span></label>
+          <input type="email" class="form-control" id="email" required>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">رقم الهاتف</label>
+          <input type="tel" class="form-control" id="phone">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">القسم</label>
+          <input type="text" class="form-control" id="department">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">المسمى الوظيفي</label>
+          <input type="text" class="form-control" id="jobTitle">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">نوع التوظيف</label>
+          <select class="form-control" id="employmentType">
+            <option value="Full-time">دوام كامل</option>
+            <option value="Part-time">دوام جزئي</option>
+            <option value="Contract">تعاقد</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">الحالة</label>
+          <select class="form-control" id="status">
+            <option value="Active">نشط</option>
+            <option value="Disabled">معطل</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">تاريخ التعيين</label>
+          <input type="date" class="form-control" id="hireDate">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">مدير مباشر (رقم الموظف)</label>
+          <input type="text" class="form-control" id="managerId">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">جهة اتصال الطوارئ - الاسم</label>
+          <input type="text" class="form-control" id="emergencyContactName">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">جهة اتصال الطوارئ - الهاتف</label>
+          <input type="tel" class="form-control" id="emergencyContactPhone">
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end mt-4 gap-2">
+        <button type="button" class="btn btn-outline-secondary" onclick="window.top.location.href='?page=Search'">إلغاء</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          <span id="submitBtnText">حفظ الموظف</span>
+          <span id="submitBtnSpinner" class="spinner-border spinner-border-sm ms-2 d-none"></span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const empId = document.getElementById('formEmployeeId').value;
+    if (empId) {
+      document.getElementById('formTitle').innerHTML = '<i class="fa-solid fa-user-pen me-2"></i>تعديل بيانات موظف';
+      document.getElementById('submitBtnText').textContent = 'حفظ التعديلات';
+      loadEmployeeForEdit(empId);
+    }
+  })();
+
+  function loadEmployeeForEdit(empId) {
+    google.script.run
+      .withSuccessHandler(function(response) {
+        if (response && response.success && response.data) {
+          const emp = response.data;
+          document.getElementById('firstName').value = emp.firstName || '';
+          document.getElementById('lastName').value = emp.lastName || '';
+          document.getElementById('email').value = emp.email || '';
+          document.getElementById('phone').value = emp.phone || '';
+          document.getElementById('department').value = emp.department || '';
+          document.getElementById('jobTitle').value = emp.jobTitle || '';
+          if (emp.employmentType) document.getElementById('employmentType').value = emp.employmentType;
+          if (emp.status) document.getElementById('status').value = emp.status;
+          document.getElementById('hireDate').value = emp.hireDate || '';
+          document.getElementById('managerId').value = emp.managerId || '';
+          document.getElementById('emergencyContactName').value = emp.emergencyContactName || '';
+          document.getElementById('emergencyContactPhone').value = emp.emergencyContactPhone || '';
+        } else {
+          showFormAlert('لم يتم العثور على بيانات هذا الموظف.', 'danger');
+        }
+      })
+      .withFailureHandler(function(err) { showFormAlert('خطأ في جلب البيانات: ' + err.message, 'danger'); })
+      .getEmployee(empId);
+  }
+
+  function showFormAlert(message, type) {
+    const alertBox = document.getElementById('formAlert');
+    alertBox.className = 'alert alert-' + type;
+    alertBox.textContent = message;
+    alertBox.classList.remove('d-none');
+  }
+
+  document.getElementById('employeeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const empId = document.getElementById('formEmployeeId').value;
+    const submitBtn = document.getElementById('submitBtn');
+    const submitBtnText = document.getElementById('submitBtnText');
+    const submitBtnSpinner = document.getElementById('submitBtnSpinner');
+
+    const employeeData = {
+      firstName: document.getElementById('firstName').value.trim(),
+      lastName: document.getElementById('lastName').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      department: document.getElementById('department').value.trim(),
+      jobTitle: document.getElementById('jobTitle').value.trim(),
+      employmentType: document.getElementById('employmentType').value,
+      status: document.getElementById('status').value,
+      hireDate: document.getElementById('hireDate').value,
+      managerId: document.getElementById('managerId').value.trim(),
+      emergencyContactName: document.getElementById('emergencyContactName').value.trim(),
+      emergencyContactPhone: document.getElementById('emergencyContactPhone').value.trim()
+    };
+
+    if (!employeeData.firstName || !employeeData.lastName || !employeeData.email) {
+      showFormAlert('من فضلك أدخل الاسم الأول واسم العائلة والبريد الإلكتروني على الأقل.', 'warning');
+      return;
+    }
+
+    submitBtn.setAttribute('disabled', 'true');
+    submitBtnSpinner.classList.remove('d-none');
+
+    const handleResult = function(response) {
+      submitBtn.removeAttribute('disabled');
+      submitBtnSpinner.classList.add('d-none');
+      if (response && response.success) {
+        showFormAlert(response.message || 'تم الحفظ بنجاح', 'success');
+        const savedId = empId || (response.data && response.data.employeeId);
+        setTimeout(function() {
+          window.top.location.href = '?page=Profile&id=' + encodeURIComponent(savedId);
+        }, 800);
+      } else {
+        showFormAlert(response.message || 'حدث خطأ أثناء الحفظ', 'danger');
+      }
+    };
+
+    const handleFailure = function(err) {
+      submitBtn.removeAttribute('disabled');
+      submitBtnSpinner.classList.add('d-none');
+      showFormAlert('حدث خطأ في الاتصال: ' + err.message, 'danger');
+    };
+
+    if (empId) {
+      google.script.run.withSuccessHandler(handleResult).withFailureHandler(handleFailure).updateEmployee(empId, employeeData);
+    } else {
+      google.script.run.withSuccessHandler(handleResult).withFailureHandler(handleFailure).saveEmployee(employeeData);
+    }
+  });
+</script>
